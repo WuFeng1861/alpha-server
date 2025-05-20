@@ -5,6 +5,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { BscscanModule } from './bscscan/bscscan.module';
 import { ContributionModule } from './contribution/contribution.module';
 import { CacheModule } from '@nestjs/cache-manager';
+import {SystemModule} from './system/system.module';
+import {ProjectReportingModule} from './project-reporting/project-reporting.module';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { CacheModule } from '@nestjs/cache-manager';
     // 业务模块
     BscscanModule,
     ContributionModule,
+    SystemModule,
+    ProjectReportingModule,
   ],
 })
 export class AppModule {}

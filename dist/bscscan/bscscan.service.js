@@ -24,11 +24,13 @@ const transaction_entity_1 = require("./entities/transaction.entity");
 const block_scan_entity_1 = require("./entities/block-scan.entity");
 const user_balance_entity_1 = require("./entities/user-balance.entity");
 const app_config_1 = require("../config/app.config");
+const cache_manager_1 = require("@nestjs/cache-manager");
 let BscscanService = BscscanService_1 = class BscscanService {
-    constructor(transactionRepository, userBnbBalanceRepository, blockScanStateRepository) {
+    constructor(transactionRepository, userBnbBalanceRepository, blockScanStateRepository, cacheManager) {
         this.transactionRepository = transactionRepository;
         this.userBnbBalanceRepository = userBnbBalanceRepository;
         this.blockScanStateRepository = blockScanStateRepository;
+        this.cacheManager = cacheManager;
         this.logger = new common_1.Logger(BscscanService_1.name);
         this.isScanning = false;
         let configData1 = (0, app_config_1.default)();
@@ -36,6 +38,7 @@ let BscscanService = BscscanService_1 = class BscscanService {
         this.apiKey = configData1.bsc.apiKey;
         this.apiUrl = configData1.bsc.apiUrl;
         this.maxBlocksPerScan = configData1.bsc.maxBlocksPerScan;
+        this.cacheTtl = configData1.cache.ttl || 300;
         console.log(this.contractAddress, this.apiKey, this.apiUrl, 'BscscanService init');
         this.initializeScanState();
     }
@@ -47,7 +50,7 @@ let BscscanService = BscscanService_1 = class BscscanService {
             if (!scanState) {
                 scanState = this.blockScanStateRepository.create({
                     id: 1,
-                    lastScannedBlock: 49864805,
+                    lastScannedBlock: 49871530,
                 });
                 await this.blockScanStateRepository.save(scanState);
             }
@@ -101,7 +104,6 @@ let BscscanService = BscscanService_1 = class BscscanService {
     }
     async getLatestBlockNumber() {
         try {
-            console.log(this.apiUrl, this.apiKey, 'getLatestBlockNumber');
             const response = await axios_1.default.get(this.apiUrl, {
                 params: {
                     module: 'proxy',
@@ -180,6 +182,8 @@ let BscscanService = BscscanService_1 = class BscscanService {
                 newBalance.blockNumber = parseInt(tx.blockNumber);
                 newBalance.balance = new bignumber_js_1.default(balance?.balance || 0).plus(entity.value).toNumber();
                 await transactionalEntityManager.save(user_balance_entity_1.UserBnbBalance, newBalance);
+                const cacheKey = `user_contribution:${tx.to}`;
+                await this.cacheManager.del(cacheKey);
                 this.logger.log(`保存交易 ${tx.hash} 并更新用户 ${tx.to} 余额为 ${newBalance.balance} BNB`);
             }
         });
@@ -214,8 +218,9 @@ exports.BscscanService = BscscanService = BscscanService_1 = __decorate([
     __param(0, (0, typeorm_1.InjectRepository)(transaction_entity_1.Transaction)),
     __param(1, (0, typeorm_1.InjectRepository)(user_balance_entity_1.UserBnbBalance)),
     __param(2, (0, typeorm_1.InjectRepository)(block_scan_entity_1.BlockScanState)),
+    __param(3, (0, common_1.Inject)(cache_manager_1.CACHE_MANAGER)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
-        typeorm_2.Repository])
+        typeorm_2.Repository, Object])
 ], BscscanService);
 //# sourceMappingURL=bscscan.service.js.map

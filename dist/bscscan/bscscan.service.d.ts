@@ -2,10 +2,12 @@ import { Repository } from 'typeorm';
 import { Transaction } from './entities/transaction.entity';
 import { BlockScanState } from './entities/block-scan.entity';
 import { UserBnbBalance } from './entities/user-balance.entity';
+import { Cache } from 'cache-manager';
 export declare class BscscanService {
     private transactionRepository;
     private userBnbBalanceRepository;
     private blockScanStateRepository;
+    private cacheManager;
     private readonly logger;
     private contractAddress;
     private apiKey;
@@ -13,7 +15,8 @@ export declare class BscscanService {
     private maxBlocksPerScan;
     private isScanning;
     private latestBlock;
-    constructor(transactionRepository: Repository<Transaction>, userBnbBalanceRepository: Repository<UserBnbBalance>, blockScanStateRepository: Repository<BlockScanState>);
+    private readonly cacheTtl;
+    constructor(transactionRepository: Repository<Transaction>, userBnbBalanceRepository: Repository<UserBnbBalance>, blockScanStateRepository: Repository<BlockScanState>, cacheManager: Cache);
     private initializeScanState;
     scanNewBlocks(): Promise<void>;
     private getLatestBlockNumber;

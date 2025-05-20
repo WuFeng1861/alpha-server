@@ -14,6 +14,8 @@ const schedule_1 = require("@nestjs/schedule");
 const bscscan_module_1 = require("./bscscan/bscscan.module");
 const contribution_module_1 = require("./contribution/contribution.module");
 const cache_manager_1 = require("@nestjs/cache-manager");
+const system_module_1 = require("./system/system.module");
+const project_reporting_module_1 = require("./project-reporting/project-reporting.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -43,6 +45,8 @@ exports.AppModule = AppModule = __decorate([
             }),
             bscscan_module_1.BscscanModule,
             contribution_module_1.ContributionModule,
+            system_module_1.SystemModule,
+            project_reporting_module_1.ProjectReportingModule,
         ],
     })
 ], AppModule);

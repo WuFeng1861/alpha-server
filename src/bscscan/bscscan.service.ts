@@ -1,8 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {Inject, Injectable, Logger} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Interval } from '@nestjs/schedule';
-import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
 import { Transaction } from './entities/transaction.entity';
@@ -10,6 +9,8 @@ import { BlockScanState } from './entities/block-scan.entity';
 import { UserBnbBalance } from './entities/user-balance.entity';
 import { BscApiResponse, BscTransaction } from './interfaces/transaction.interface';
 import configData from '../config/app.config'
+import {CACHE_MANAGER} from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class BscscanService {
@@ -20,6 +21,7 @@ export class BscscanService {
   private maxBlocksPerScan: number;
   private isScanning = false;
   private latestBlock: number;
+  private readonly cacheTtl: number;
 
   constructor(
     @InjectRepository(Transaction)
@@ -28,6 +30,7 @@ export class BscscanService {
     private userBnbBalanceRepository: Repository<UserBnbBalance>,
     @InjectRepository(BlockScanState)
     private blockScanStateRepository: Repository<BlockScanState>,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {
     // 从配置服务获取设置
     let configData1 = configData();
@@ -35,6 +38,8 @@ export class BscscanService {
     this.apiKey = configData1.bsc.apiKey;
     this.apiUrl = configData1.bsc.apiUrl;
     this.maxBlocksPerScan = configData1.bsc.maxBlocksPerScan;
+    // 获取缓存过期时间
+    this.cacheTtl = configData1.cache.ttl || 300;
     console.log(this.contractAddress, this.apiKey, this.apiUrl, 'BscscanService init');
     
     // 初始化扫描状态
@@ -132,7 +137,7 @@ export class BscscanService {
   // 获取最新区块号
   private async getLatestBlockNumber(): Promise<number> {
     try {
-      console.log(this.apiUrl, this.apiKey, 'getLatestBlockNumber');
+      // console.log(this.apiUrl, this.apiKey, 'getLatestBlockNumber');
       const response = await axios.get(this.apiUrl, {
         params: {
           module: 'proxy',
@@ -234,6 +239,10 @@ export class BscscanService {
         newBalance.balance = new BigNumber(balance?.balance || 0).plus(entity.value).toNumber();
         // 保存余额记录
         await transactionalEntityManager.save(UserBnbBalance, newBalance);
+  
+        // 更新缓存
+        const cacheKey = `user_contribution:${tx.to}`;
+        await this.cacheManager.del(cacheKey);
       
         this.logger.log(`保存交易 ${tx.hash} 并更新用户 ${tx.to} 余额为 ${newBalance.balance} BNB`);
       }

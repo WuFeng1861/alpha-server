@@ -12,14 +12,12 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 var ContributionService_1;
-var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ContributionService = void 0;
 const common_1 = require("@nestjs/common");
 const bscscan_service_1 = require("../bscscan/bscscan.service");
 const common_2 = require("@nestjs/common");
 const cache_manager_1 = require("@nestjs/cache-manager");
-const cache_manager_2 = require("cache-manager");
 const bignumber_js_1 = require("bignumber.js");
 const app_config_1 = require("../config/app.config");
 let ContributionService = ContributionService_1 = class ContributionService {
@@ -61,11 +59,8 @@ let ContributionService = ContributionService_1 = class ContributionService {
     }
     async refreshUserContribution(address) {
         try {
-            const totalBnb = await this.bscscanService.getTotalReceivedBnb(address);
-            const contribution = this.calculateContribution(totalBnb);
-            const cacheKey = `user_contribution:${address}`;
-            await this.cacheManager.set(cacheKey, contribution, this.cacheTtl * 1000);
-            return contribution;
+            await this.cacheManager.del(`user_contribution:${address}`);
+            return await this.getUserContribution(address);
         }
         catch (error) {
             this.logger.error(`刷新用户 ${address} 贡献度缓存出错: ${error.message}`);
@@ -84,6 +79,6 @@ exports.ContributionService = ContributionService;
 exports.ContributionService = ContributionService = ContributionService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(1, (0, common_2.Inject)(cache_manager_1.CACHE_MANAGER)),
-    __metadata("design:paramtypes", [bscscan_service_1.BscscanService, typeof (_a = typeof cache_manager_2.Cache !== "undefined" && cache_manager_2.Cache) === "function" ? _a : Object])
+    __metadata("design:paramtypes", [bscscan_service_1.BscscanService, Object])
 ], ContributionService);
 //# sourceMappingURL=contribution.service.js.map

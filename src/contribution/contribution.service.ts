@@ -73,15 +73,10 @@ export class ContributionService {
   // 刷新单个用户的贡献度缓存
   async refreshUserContribution(address: string): Promise<number> {
     try {
-      // 获取用户收到的BNB总量
-      const totalBnb = await this.bscscanService.getTotalReceivedBnb(address);
-      // 计算贡献度
-      const contribution = this.calculateContribution(totalBnb);
-      // 更新缓存
-      const cacheKey = `user_contribution:${address}`;
-      await this.cacheManager.set(cacheKey, contribution, this.cacheTtl * 1000);
-      
-      return contribution;
+      // 删除缓存
+      await this.cacheManager.del(`user_contribution:${address}`);
+      // 获取新的
+      return await this.getUserContribution(address);
     } catch (error) {
       this.logger.error(`刷新用户 ${address} 贡献度缓存出错: ${error.message}`);
       throw error;
