@@ -22,7 +22,17 @@ export class BscscanController {
   
   // 扫描指定区块范围
   @Get('scan-block-range/:startBlock/:endBlock')
-  async scanBlockRange(@Param('startBlock') startBlock: number, @Param('endBlock') endBlock: number): Promise<number> {
-    return await this.bscscanService.scanBlockRange(startBlock, endBlock);
+  async scanBlockRange(@Param('startBlock') startBlock: number, @Param('endBlock') endBlock: number, @Query("targetCount") targetCount: number): Promise<number> {
+    return await this.bscscanService.scanBlockRange(startBlock, endBlock, targetCount);
+  }
+  
+  @Get('get-range-count/:startBlock/:endBlock')
+  async getRangeCount(@Param('startBlock') startBlock: number, @Param('endBlock') endBlock: number): Promise<number> {
+    return await this.bscscanService.getTransactionCountInRange(startBlock, endBlock);
+  }
+  
+  @Get('check-range-count-before10000')
+  async checkRangeCount(): Promise<number> {
+    return await this.bscscanService.scanBlockRange(49871530, 99999999, 10000);
   }
 }

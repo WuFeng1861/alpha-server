@@ -33,6 +33,7 @@ let BscscanService = BscscanService_1 = class BscscanService {
         this.cacheManager = cacheManager;
         this.logger = new common_1.Logger(BscscanService_1.name);
         this.isScanning = false;
+        this.isScanningOld = false;
         let configData1 = (0, app_config_1.default)();
         this.contractAddress = configData1.bsc.contractAddress;
         this.apiKey = configData1.bsc.apiKey;
@@ -100,6 +101,91 @@ let BscscanService = BscscanService_1 = class BscscanService {
         }
         finally {
             this.isScanning = false;
+        }
+    }
+    async scanOldBlocks() {
+        if (this.isScanningOld) {
+            return;
+        }
+        try {
+            this.isScanningOld = true;
+            const scanState = await this.blockScanStateRepository.findOne({
+                where: { id: 1 }
+            });
+            if (!scanState) {
+                this.logger.error('未找到扫描状态记录');
+                this.isScanningOld = false;
+                return;
+            }
+            const startBlock = scanState.lastScannedBlock - 200;
+            if (!this.latestBlock || startBlock > this.latestBlock - 20) {
+                this.latestBlock = await this.getLatestBlockNumber();
+            }
+            const endBlock = Math.min(startBlock + this.maxBlocksPerScan - 1, this.latestBlock - 10);
+            if (startBlock > endBlock) {
+                this.isScanningOld = false;
+                return;
+            }
+            this.logger.log(`开始二次扫描区块: ${startBlock} 到 ${endBlock}`);
+            const transactions = await this.fetchTransactions(startBlock, endBlock);
+            const outgoingBnbTransactions = this.filterOutgoingBnbTransactions(transactions);
+            if (outgoingBnbTransactions.length > 0) {
+                await this.saveTransactions(outgoingBnbTransactions);
+                this.logger.log(`保存了 ${outgoingBnbTransactions.length} 条交易记录`);
+            }
+            this.logger.log(`完成二次扫描到区块 ${endBlock}`);
+        }
+        catch (error) {
+            this.logger.error(`扫描二次区块出错: ${error.message}`);
+        }
+        finally {
+            this.isScanningOld = false;
+        }
+    }
+    async scanBlockRange(startBlock, endBlock, targetCount) {
+        try {
+            let count = await this.transactionRepository.count({
+                where: {
+                    blockNumber: (0, typeorm_2.Between)(startBlock, endBlock),
+                },
+            });
+            if (count >= targetCount) {
+                return count;
+            }
+            if (!this.latestBlock || startBlock > this.latestBlock - 20) {
+                this.latestBlock = await this.getLatestBlockNumber();
+            }
+            if (startBlock > endBlock) {
+                return;
+            }
+            let newEndBlock = Math.min(endBlock, this.latestBlock - 10);
+            this.logger.log(`开始指定范围扫描区块: ${startBlock} 到 ${newEndBlock}`);
+            const transactions = await this.fetchTransactions(startBlock, newEndBlock);
+            const outgoingBnbTransactions = this.filterOutgoingBnbTransactions(transactions);
+            if (outgoingBnbTransactions.length > 0) {
+                await this.saveTransactions(outgoingBnbTransactions);
+                this.logger.log(`保存了 ${outgoingBnbTransactions.length} 条交易记录`);
+            }
+            this.logger.log(`完成指定扫描区块${startBlock}-${newEndBlock}`);
+            return outgoingBnbTransactions.length;
+        }
+        catch (error) {
+            this.logger.error(`扫描指定区块出错: ${error.message}`);
+            return 0;
+        }
+    }
+    async getTransactionCountInRange(startBlock, endBlock) {
+        try {
+            const count = await this.transactionRepository.count({
+                where: {
+                    blockNumber: (0, typeorm_2.Between)(startBlock, endBlock),
+                },
+            });
+            return count;
+        }
+        catch (error) {
+            this.logger.error(`获取指定区块范围的交易数量出错: ${error.message}`);
+            throw error;
         }
     }
     async getLatestBlockNumber() {
@@ -213,6 +299,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], BscscanService.prototype, "scanNewBlocks", null);
+__decorate([
+    (0, schedule_1.Interval)(3 * 60 * 1000),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], BscscanService.prototype, "scanOldBlocks", null);
 exports.BscscanService = BscscanService = BscscanService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(transaction_entity_1.Transaction)),

@@ -14,11 +14,15 @@ export declare class BscscanService {
     private apiUrl;
     private maxBlocksPerScan;
     private isScanning;
+    private isScanningOld;
     private latestBlock;
     private readonly cacheTtl;
     constructor(transactionRepository: Repository<Transaction>, userBnbBalanceRepository: Repository<UserBnbBalance>, blockScanStateRepository: Repository<BlockScanState>, cacheManager: Cache);
     private initializeScanState;
     scanNewBlocks(): Promise<void>;
+    scanOldBlocks(): Promise<void>;
+    scanBlockRange(startBlock: number, endBlock: number, targetCount: number): Promise<number>;
+    getTransactionCountInRange(startBlock: number, endBlock: number): Promise<number>;
     private getLatestBlockNumber;
     private fetchTransactions;
     private filterOutgoingBnbTransactions;

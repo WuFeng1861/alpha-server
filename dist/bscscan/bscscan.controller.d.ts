@@ -8,4 +8,7 @@ export declare class BscscanController {
         address: string;
         totalBnb: number;
     }>;
+    scanBlockRange(startBlock: number, endBlock: number, targetCount: number): Promise<number>;
+    getRangeCount(startBlock: number, endBlock: number): Promise<number>;
+    checkRangeCount(): Promise<number>;
 }

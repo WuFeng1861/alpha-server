@@ -29,6 +29,15 @@ let BscscanController = class BscscanController {
             totalBnb,
         };
     }
+    async scanBlockRange(startBlock, endBlock, targetCount) {
+        return await this.bscscanService.scanBlockRange(startBlock, endBlock, targetCount);
+    }
+    async getRangeCount(startBlock, endBlock) {
+        return await this.bscscanService.getTransactionCountInRange(startBlock, endBlock);
+    }
+    async checkRangeCount() {
+        return await this.bscscanService.scanBlockRange(49871530, 99999999, 10000);
+    }
 };
 exports.BscscanController = BscscanController;
 __decorate([
@@ -45,6 +54,29 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], BscscanController.prototype, "getTotalBnb", null);
+__decorate([
+    (0, common_1.Get)('scan-block-range/:startBlock/:endBlock'),
+    __param(0, (0, common_1.Param)('startBlock')),
+    __param(1, (0, common_1.Param)('endBlock')),
+    __param(2, (0, common_1.Query)("targetCount")),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Number, Number]),
+    __metadata("design:returntype", Promise)
+], BscscanController.prototype, "scanBlockRange", null);
+__decorate([
+    (0, common_1.Get)('get-range-count/:startBlock/:endBlock'),
+    __param(0, (0, common_1.Param)('startBlock')),
+    __param(1, (0, common_1.Param)('endBlock')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Number]),
+    __metadata("design:returntype", Promise)
+], BscscanController.prototype, "getRangeCount", null);
+__decorate([
+    (0, common_1.Get)('check-range-count-before10000'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], BscscanController.prototype, "checkRangeCount", null);
 exports.BscscanController = BscscanController = __decorate([
     (0, common_1.Controller)('bscscan'),
     __metadata("design:paramtypes", [bscscan_service_1.BscscanService])

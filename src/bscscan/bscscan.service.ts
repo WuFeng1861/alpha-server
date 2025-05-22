@@ -1,6 +1,6 @@
 import {Inject, Injectable, Logger} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import {Between, Repository} from 'typeorm';
 import { Interval } from '@nestjs/schedule';
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
@@ -196,8 +196,17 @@ export class BscscanService {
   }
   
   // 扫描指定区块范围
-  async scanBlockRange(startBlock: number, endBlock: number): Promise<number> {
+  async scanBlockRange(startBlock: number, endBlock: number, targetCount: number): Promise<number> {
+    // 从mysql中获取指定区块范围的交易数据数量
     try {
+      let count = await this.transactionRepository.count({
+        where: {
+          blockNumber: Between(startBlock, endBlock),
+        },
+      });
+      if (count >= targetCount) {
+        return count;
+      }
       // 查询区块链上的最新区块
       if(!this.latestBlock || startBlock > this.latestBlock - 20) {
         this.latestBlock = await this.getLatestBlockNumber();
@@ -224,6 +233,21 @@ export class BscscanService {
     } catch (error) {
       this.logger.error(`扫描指定区块出错: ${error.message}`);
       return 0;
+    }
+  }
+  
+  // 获取数据库指定区块范围的交易数量
+  async getTransactionCountInRange(startBlock: number, endBlock: number): Promise<number> {
+    try {
+      const count = await this.transactionRepository.count({
+        where: {
+          blockNumber: Between(startBlock, endBlock),
+        },
+      });
+      return count;
+    } catch (error) {
+      this.logger.error(`获取指定区块范围的交易数量出错: ${error.message}`);
+      throw error;
     }
   }
 
