@@ -19,4 +19,10 @@ export class BscscanController {
       totalBnb,
     };
   }
+  
+  // 扫描指定区块范围
+  @Get('scan-block-range/:startBlock/:endBlock')
+  async scanBlockRange(@Param('startBlock') startBlock: number, @Param('endBlock') endBlock: number): Promise<number> {
+    return await this.bscscanService.scanBlockRange(startBlock, endBlock);
+  }
 }

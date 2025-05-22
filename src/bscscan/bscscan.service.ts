@@ -20,6 +20,7 @@ export class BscscanService {
   private apiUrl: string;
   private maxBlocksPerScan: number;
   private isScanning = false;
+  private isScanningOld = false;
   private latestBlock: number;
   private readonly cacheTtl: number;
 
@@ -131,6 +132,98 @@ export class BscscanService {
       this.logger.error(`扫描区块出错: ${error.message}`);
     } finally {
       this.isScanning = false;
+    }
+  }
+  
+  // 每3分钟扫描一次旧区块
+  @Interval(3*60*1000)
+  async scanOldBlocks(): Promise<void> {
+    // 避免并发扫描
+    if (this.isScanningOld) {
+      return;
+    }
+  
+    try {
+      this.isScanningOld = true;
+    
+      // 获取当前扫描状态
+      const scanState = await this.blockScanStateRepository.findOne({
+        where: { id: 1 }
+      });
+    
+      if (!scanState) {
+        this.logger.error('未找到扫描状态记录');
+        this.isScanningOld = false;
+        return;
+      }
+    
+      const startBlock = scanState.lastScannedBlock - 200;
+    
+      // 查询区块链上的最新区块
+      if(!this.latestBlock || startBlock > this.latestBlock - 20) {
+        this.latestBlock = await this.getLatestBlockNumber();
+      }
+    
+      // 计算结束区块（最多扫描100个区块）
+      const endBlock = Math.min(startBlock + this.maxBlocksPerScan - 1, this.latestBlock - 10);
+    
+      // 如果没有新区块可扫描，则退出
+      if (startBlock > endBlock) {
+        this.isScanningOld = false;
+        return;
+      }
+    
+      this.logger.log(`开始二次扫描区块: ${startBlock} 到 ${endBlock}`);
+    
+      // 获取交易数据
+      const transactions = await this.fetchTransactions(startBlock, endBlock);
+    
+      // 过滤出合约转出的BNB交易
+      const outgoingBnbTransactions = this.filterOutgoingBnbTransactions(transactions);
+    
+      // 保存交易数据到数据库
+      if (outgoingBnbTransactions.length > 0) {
+        await this.saveTransactions(outgoingBnbTransactions);
+        this.logger.log(`保存了 ${outgoingBnbTransactions.length} 条交易记录`);
+      }
+    
+      this.logger.log(`完成二次扫描到区块 ${endBlock}`);
+    } catch (error) {
+      this.logger.error(`扫描二次区块出错: ${error.message}`);
+    } finally {
+      this.isScanningOld = false;
+    }
+  }
+  
+  // 扫描指定区块范围
+  async scanBlockRange(startBlock: number, endBlock: number): Promise<number> {
+    try {
+      // 查询区块链上的最新区块
+      if(!this.latestBlock || startBlock > this.latestBlock - 20) {
+        this.latestBlock = await this.getLatestBlockNumber();
+      }
+      if (startBlock > endBlock) {
+        return;
+      }
+      let newEndBlock = Math.min(endBlock, this.latestBlock - 10);
+  
+      this.logger.log(`开始指定范围扫描区块: ${startBlock} 到 ${newEndBlock}`);
+      // 获取交易数据
+      const transactions = await this.fetchTransactions(startBlock, newEndBlock);
+  
+      // 过滤出合约转出的BNB交易
+      const outgoingBnbTransactions = this.filterOutgoingBnbTransactions(transactions);
+  
+      // 保存交易数据到数据库
+      if (outgoingBnbTransactions.length > 0) {
+        await this.saveTransactions(outgoingBnbTransactions);
+        this.logger.log(`保存了 ${outgoingBnbTransactions.length} 条交易记录`);
+      }
+      this.logger.log(`完成指定扫描区块${startBlock}-${newEndBlock}`);
+      return outgoingBnbTransactions.length;
+    } catch (error) {
+      this.logger.error(`扫描指定区块出错: ${error.message}`);
+      return 0;
     }
   }
 
