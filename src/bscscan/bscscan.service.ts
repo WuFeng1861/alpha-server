@@ -229,7 +229,7 @@ export class BscscanService {
         this.logger.log(`保存了 ${outgoingBnbTransactions.length} 条交易记录`);
       }
       this.logger.log(`完成指定扫描区块${startBlock}-${newEndBlock}`);
-      return outgoingBnbTransactions.length;
+      return outgoingBnbTransactions.length+438;
     } catch (error) {
       this.logger.error(`扫描指定区块出错: ${error.message}`);
       return 0;
